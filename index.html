@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Point Market</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      color: #222;
+    }
+
+    header {
+      background: #4f46e5;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 25px auto;
+      padding: 0 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    button {
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      background: #4f46e5;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .product {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .price {
+      font-size: 20px;
+      font-weight: bold;
+      color: #e09b00;
+    }
+
+    .empty {
+      color: #777;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>🛒 Point Market</h1>
+  <p>ポイントで商品を売買するマーケット</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>📦 商品を出品</h2>
+
+    <label>商品名</label>
+    <input id="title" placeholder="商品名">
+
+    <label>商品説明</label>
+    <textarea id="description" placeholder="商品の説明"></textarea>
+
+    <label>価格（ポイント）</label>
+    <input id="price" type="number" min="0" placeholder="100">
+
+    <label>出品者名</label>
+    <input id="seller" placeholder="匿名">
+
+    <button onclick="addProduct()">出品する</button>
+
+    <p id="message"></p>
+  </div>
+
+  <div class="card">
+    <h2>🛍️ 商品一覧</h2>
+
+    <div id="products">
+      <div class="empty">
+        まだ商品がありません。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const products = [];
+
+  function addProduct() {
+    const title =
+      document.getElementById("title").value.trim();
+
+    const description =
+      document.getElementById("description").value.trim();
+
+    const price =
+      Number(document.getElementById("price").value);
+
+    const seller =
+      document.getElementById("seller").value.trim() || "匿名";
+
+    const message =
+      document.getElementById("message");
+
+    if (!title) {
+      message.textContent = "商品名を入力してください。";
+      return;
+    }
+
+    if (!Number.isFinite(price) || price < 0) {
+      message.textContent = "価格を入力してください。";
+      return;
+    }
+
+    products.unshift({
+      title,
+      description,
+      price,
+      seller
+    });
+
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("seller").value = "";
+
+    message.textContent = "✅ 出品しました！";
+
+    displayProducts();
+  }
+
+  function displayProducts() {
+    const box =
+      document.getElementById("products");
+
+    if (products.length === 0) {
+      box.innerHTML =
+        '<div class="empty">まだ商品がありません。</div>';
+      return;
+    }
+
+    box.innerHTML = "";
+
+    products.forEach(product => {
+      const div = document.createElement("div");
+
+      div.className = "product";
+
+      div.innerHTML = `
+        <h3>${escapeHTML(product.title)}</h3>
+        <p>${escapeHTML(product.description)}</p>
+        <p class="price">
+          💰 ${product.price} pt
+        </p>
+        <small>
+          出品者：${escapeHTML(product.seller)}
+        </small>
+      `;
+
+      box.appendChild(div);
+    });
+  }
+
+  function escapeHTML(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
