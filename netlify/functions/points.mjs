@@ -27,6 +27,17 @@ async function getUsers() {
     : {};
 }
 
+async function getProducts() {
+  const products = await store.get("products", {
+    type: "json",
+    consistency: "strong"
+  });
+
+  return Array.isArray(products)
+    ? products
+    : [];
+}
+
 export default async function handler(request) {
 
   if (request.method === "OPTIONS") {
@@ -38,11 +49,16 @@ export default async function handler(request) {
 
   try {
 
-    if (request.method === "POST") {
+    /* =========================
+       ユーザー作成・ポイント取得
+    ========================= */
 
-      const body = await request.json();
+    if (request.method === "GET") {
 
-      const userId = String(body.userId || "").trim();
+      const url = new URL(request.url);
+      const userId = String(
+        url.searchParams.get("userId") || ""
+      ).trim();
 
       if (!userId) {
         return json({
@@ -58,10 +74,7 @@ export default async function handler(request) {
           createdAt: Date.now()
         };
 
-        await store.setJSON(
-          "users",
-          users
-        );
+        await store.setJSON("users", users);
       }
 
       return json({
@@ -71,12 +84,20 @@ export default async function handler(request) {
     }
 
 
-    if (request.method === "GET") {
+    /* =========================
+       ユーザー作成
+    ========================= */
 
-      const url = new URL(request.url);
+    if (request.method === "POST") {
+
+      const body = await request.json();
+
+      const action =
+        String(body.action || "").trim();
 
       const userId =
-        url.searchParams.get("userId");
+        String(body.userId || "").trim();
+
 
       if (!userId) {
         return json({
@@ -84,21 +105,165 @@ export default async function handler(request) {
         }, 400);
       }
 
+
       const users = await getUsers();
+
 
       if (!users[userId]) {
         users[userId] = {
           points: 1000,
           createdAt: Date.now()
         };
+      }
+
+
+      /* =========================
+         購入
+      ========================= */
+
+      if (action === "buy") {
+
+        const productId =
+          String(body.productId || "").trim();
+
+
+        if (!productId) {
+          return json({
+            error: "商品IDがありません"
+          }, 400);
+        }
+
+
+        const products =
+          await getProducts();
+
+
+        const index =
+          products.findIndex(
+            product =>
+              product.id === productId
+          );
+
+
+        if (index === -1) {
+          return json({
+            error: "商品が見つかりません"
+          }, 404);
+        }
+
+
+        const product =
+          products[index];
+
+
+        if (
+          product.sellerId &&
+          product.sellerId === userId
+        ) {
+          return json({
+            error: "自分の商品は購入できません"
+          }, 400);
+        }
+
+
+        const price =
+          Number(product.price);
+
+
+        if (
+          !Number.isInteger(price) ||
+          price <= 0
+        ) {
+          return json({
+            error: "商品の価格が不正です"
+          }, 400);
+        }
+
+
+        const buyer =
+          users[userId];
+
+
+        if (buyer.points < price) {
+          return json({
+            error: "ポイントが足りません",
+            points: buyer.points
+          }, 400);
+        }
+
+
+        /*
+          購入者からポイントを減らす
+        */
+
+        buyer.points -= price;
+
+
+        /*
+          出品者が登録されている場合は
+          出品者へポイントを渡す
+        */
+
+        if (
+          product.sellerId &&
+          product.sellerId !== userId
+        ) {
+
+          if (!users[product.sellerId]) {
+
+            users[product.sellerId] = {
+              points: 0,
+              createdAt: Date.now()
+            };
+
+          }
+
+          users[product.sellerId].points += price;
+        }
+
+
+        /*
+          商品をマーケットから削除
+        */
+
+        products.splice(index, 1);
+
+
+        /*
+          商品とポイントを保存
+        */
 
         await store.setJSON(
           "users",
           users
         );
+
+        await store.setJSON(
+          "products",
+          products
+        );
+
+
+        return json({
+          success: true,
+          points: buyer.points,
+          product
+        });
       }
 
+
+      /*
+        通常のユーザー登録
+      */
+
+      await store.setJSON(
+        "users",
+        users
+      );
+
+
       return json({
+        success: true,
         userId,
         points: users[userId].points
       });
@@ -114,7 +279,7 @@ export default async function handler(request) {
     console.error(error);
 
     return json({
-      error: "サーバーエラー"
+      error: "サーバーエラーが発生しました"
     }, 500);
   }
 }
