@@ -36,20 +36,28 @@ export default async function handler(request) {
 
   try {
 
-    /* 商品一覧 */
+    /* =========================
+       商品一覧
+    ========================= */
+
     if (request.method === "GET") {
 
       const products = await getProducts();
 
       products.sort(
-        (a, b) => b.createdAt - a.createdAt
+        (a, b) =>
+          Number(b.createdAt || 0) -
+          Number(a.createdAt || 0)
       );
 
       return response(products);
     }
 
 
-    /* 商品出品 */
+    /* =========================
+       商品出品
+    ========================= */
+
     if (request.method === "POST") {
 
       const body = await request.json();
@@ -63,13 +71,19 @@ export default async function handler(request) {
       const seller =
         String(body.seller || "匿名").trim();
 
+      const sellerId =
+        String(body.sellerId || "").trim();
+
       const price =
         Number(body.price);
 
 
       if (!title) {
         return response(
-          { error: "商品名を入力してください" },
+          {
+            error:
+              "商品名を入力してください"
+          },
           400
         );
       }
@@ -80,7 +94,21 @@ export default async function handler(request) {
         price <= 0
       ) {
         return response(
-          { error: "価格が正しくありません" },
+          {
+            error:
+              "価格が正しくありません"
+          },
+          400
+        );
+      }
+
+
+      if (!sellerId) {
+        return response(
+          {
+            error:
+              "ユーザーIDがありません"
+          },
           400
         );
       }
@@ -107,6 +135,9 @@ export default async function handler(request) {
         seller:
           seller.slice(0, 50) || "匿名",
 
+        sellerId:
+          sellerId,
+
         createdAt:
           Date.now()
 
@@ -129,22 +160,39 @@ export default async function handler(request) {
     }
 
 
-    /* 商品削除 */
+    /* =========================
+       商品削除
+    ========================= */
+
     if (request.method === "DELETE") {
 
       const body =
         await request.json();
 
       const id =
-        String(body.id || "");
+        String(body.id || "").trim();
 
-      const seller =
-        String(body.seller || "");
+      const sellerId =
+        String(body.sellerId || "").trim();
 
 
       if (!id) {
         return response(
-          { error: "商品IDがありません" },
+          {
+            error:
+              "商品IDがありません"
+          },
+          400
+        );
+      }
+
+
+      if (!sellerId) {
+        return response(
+          {
+            error:
+              "ユーザーIDがありません"
+          },
           400
         );
       }
@@ -156,23 +204,35 @@ export default async function handler(request) {
 
       const product =
         products.find(
-          p => p.id === id
+          p =>
+            String(p.id) === id
         );
 
 
       if (!product) {
         return response(
-          { error: "商品が見つかりません" },
+          {
+            error:
+              "商品が見つかりません"
+          },
           404
         );
       }
 
 
+      /*
+        出品者本人か確認
+      */
+
       if (
-        product.seller !== seller
+        String(product.sellerId || "") !==
+        sellerId
       ) {
         return response(
-          { error: "自分の商品だけ削除できます" },
+          {
+            error:
+              "自分の商品だけ削除できます"
+          },
           403
         );
       }
@@ -180,7 +240,8 @@ export default async function handler(request) {
 
       const newProducts =
         products.filter(
-          p => p.id !== id
+          p =>
+            String(p.id) !== id
         );
 
 
@@ -197,7 +258,10 @@ export default async function handler(request) {
 
 
     return response(
-      { error: "Method Not Allowed" },
+      {
+        error:
+          "Method Not Allowed"
+      },
       405
     );
 
