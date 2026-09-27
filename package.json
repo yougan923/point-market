@@ -2,7 +2,10 @@
   "name": "point-market",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "@netlify/blobs": "^9.0.0"
+    "express": "^5.1.0"
   }
 }
